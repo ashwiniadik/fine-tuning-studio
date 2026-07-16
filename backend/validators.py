@@ -77,3 +77,29 @@ def validate_instruction_jsonl(content: str) -> list[str]:
         ):
             errors.append(f"Record {i} has a response with fewer than {MIN_RESPONSE_WORDS} words.")
     return errors
+
+
+MIN_PREFERENCE_EXAMPLES = 20
+
+
+def validate_preference_jsonl(content: str) -> list[str]:
+    errors = []
+    records, parse_errors = _parse_jsonl(content)
+    errors.extend(parse_errors)
+    if len(records) < MIN_PREFERENCE_EXAMPLES:
+        errors.append(
+            f"Preference dataset needs at least {MIN_PREFERENCE_EXAMPLES} examples, "
+            f"found {len(records)}."
+        )
+    for i, record in enumerate(records):
+        if set(record.keys()) != {"prompt", "chosen", "rejected"}:
+            errors.append(
+                f"Record {i} must have exactly 'prompt', 'chosen', and 'rejected' keys, "
+                f"got {sorted(record.keys())}."
+            )
+            continue
+        if not record["chosen"].strip() or not record["rejected"].strip():
+            errors.append(f"Record {i} has an empty chosen or rejected response.")
+        if record["chosen"] == record["rejected"]:
+            errors.append(f"Record {i} has identical chosen and rejected responses.")
+    return errors

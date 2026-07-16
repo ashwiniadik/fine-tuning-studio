@@ -66,3 +66,63 @@ def test_instruction_jsonl_non_object_line_reports_clean_error():
     # clean validation error like every other malformed-input case.
     errors = validate_instruction_jsonl("[1, 2, 3]")
     assert any("must be a JSON object" in e for e in errors)
+
+
+from backend.validators import validate_preference_jsonl
+
+
+def _make_preference_jsonl(n=20):
+    lines = []
+    for i in range(n):
+        lines.append(
+            json.dumps(
+                {
+                    "prompt": f"Question {i}?",
+                    "chosen": "A specific, correct, helpful answer.",
+                    "rejected": "A vague non-answer.",
+                }
+            )
+        )
+    return "\n".join(lines)
+
+
+def test_valid_preference_jsonl_returns_no_errors():
+    assert validate_preference_jsonl(_make_preference_jsonl()) == []
+
+
+def test_preference_jsonl_too_few_examples():
+    errors = validate_preference_jsonl(_make_preference_jsonl(n=5))
+    assert any("at least 20 examples" in e for e in errors)
+
+
+def test_preference_jsonl_bad_schema():
+    content = json.dumps({"prompt": "Q?", "chosen": "A", "rejected": "B", "extra": "C"})
+    errors = validate_preference_jsonl(content)
+    assert any("exactly 'prompt', 'chosen', and 'rejected'" in e for e in errors)
+
+
+def test_preference_jsonl_identical_chosen_and_rejected():
+    content = json.dumps({"prompt": "Q?", "chosen": "Same text.", "rejected": "Same text."})
+    errors = validate_preference_jsonl(content)
+    assert any("identical chosen and rejected" in e for e in errors)
+
+
+def test_preference_jsonl_does_not_require_chosen_longer_than_rejected():
+    # Deliberate design decision: the Finance project's tests required chosen
+    # to be a longer word count than rejected, but that rule was flagged during
+    # that project's code review as a length-confound anti-pattern for DPO
+    # training. This validator intentionally does not enforce it -- a short,
+    # sharp chosen answer must not be rejected by the validator just for being
+    # shorter than a padded-out rejected one.
+    content = json.dumps(
+        {
+            "prompt": "What is a SIP?",
+            "chosen": "A SIP is a plan.",
+            "rejected": (
+                "A systematic investment plan lets you invest a fixed amount "
+                "regularly into a mutual fund over an extended period of time."
+            ),
+        }
+    )
+    errors = validate_preference_jsonl(content)
+    assert not any("longer" in e.lower() for e in errors)
