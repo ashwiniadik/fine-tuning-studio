@@ -1,5 +1,9 @@
-fastapi
-uvicorn[standard]
-python-multipart
-httpx
-pytest
+# Floor-pinned (not left unpinned): unlike a Colab-only notebook project where
+# the remote environment controls resolution, this app runs and is tested on
+# this machine, so an unpinned install could silently drift to a breaking
+# version between runs.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+httpx>=0.27
+pytest>=8
