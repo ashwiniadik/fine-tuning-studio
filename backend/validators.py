@@ -38,9 +38,14 @@ def _parse_jsonl(content: str) -> tuple[list[dict], list[str]]:
         if not line:
             continue
         try:
-            records.append(json.loads(line))
+            parsed = json.loads(line)
         except json.JSONDecodeError as e:
             errors.append(f"Line {i + 1} is not valid JSON: {e}")
+            continue
+        if not isinstance(parsed, dict):
+            errors.append(f"Line {i + 1} must be a JSON object, got {type(parsed).__name__}.")
+            continue
+        records.append(parsed)
     return records, errors
 
 

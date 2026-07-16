@@ -1,3 +1,5 @@
+import json
+
 from backend.validators import validate_raw_text
 
 
@@ -20,8 +22,6 @@ def test_raw_text_paragraph_too_short():
     errors = validate_raw_text(text)
     assert any("fewer than 15 words" in e for e in errors)
 
-
-import json
 
 from backend.validators import validate_instruction_jsonl
 
@@ -58,3 +58,11 @@ def test_instruction_jsonl_short_response():
 def test_instruction_jsonl_invalid_json_line():
     errors = validate_instruction_jsonl("not valid json")
     assert any("not valid JSON" in e for e in errors)
+
+
+def test_instruction_jsonl_non_object_line_reports_clean_error():
+    # A line that's valid JSON but not an object (e.g. a bare list) must not
+    # crash with an AttributeError on record.keys() -- it should produce a
+    # clean validation error like every other malformed-input case.
+    errors = validate_instruction_jsonl("[1, 2, 3]")
+    assert any("must be a JSON object" in e for e in errors)
