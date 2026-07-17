@@ -101,6 +101,15 @@ def test_preference_jsonl_bad_schema():
     assert any("exactly 'prompt', 'chosen', and 'rejected'" in e for e in errors)
 
 
+def test_preference_jsonl_non_string_chosen_or_rejected_reports_clean_error():
+    # A record where `chosen` or `rejected` is not a string (e.g. a number)
+    # must not crash with an AttributeError on .strip() -- it should produce
+    # a clean validation error like every other malformed-input case.
+    content = json.dumps({"prompt": "Q?", "chosen": 5, "rejected": "b"})
+    errors = validate_preference_jsonl(content)
+    assert any("non-string chosen or rejected" in e for e in errors)
+
+
 def test_preference_jsonl_identical_chosen_and_rejected():
     content = json.dumps({"prompt": "Q?", "chosen": "Same text.", "rejected": "Same text."})
     errors = validate_preference_jsonl(content)

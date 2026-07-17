@@ -98,6 +98,9 @@ def validate_preference_jsonl(content: str) -> list[str]:
                 f"got {sorted(record.keys())}."
             )
             continue
+        if not isinstance(record["chosen"], str) or not isinstance(record["rejected"], str):
+            errors.append(f"Record {i} has a non-string chosen or rejected value.")
+            continue
         if not record["chosen"].strip() or not record["rejected"].strip():
             errors.append(f"Record {i} has an empty chosen or rejected response.")
         if record["chosen"] == record["rejected"]:

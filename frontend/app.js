@@ -17,16 +17,37 @@ async function handleSubmit(event) {
 
   const formData = new FormData(event.target);
 
-  const response = await fetch("/api/generate", {
-    method: "POST",
-    body: formData,
-  });
+  let response;
+  try {
+    response = await fetch("/api/generate", {
+      method: "POST",
+      body: formData,
+    });
+  } catch (err) {
+    statusEl.textContent = "Something went wrong. Please try again.";
+    return;
+  }
 
   if (!response.ok) {
-    const error = await response.json();
-    const errors = Array.isArray(error.detail) ? error.detail : [String(error.detail)];
-    statusEl.innerHTML =
-      "<strong>Errors:</strong><ul>" + errors.map((e) => `<li>${e}</li>`).join("") + "</ul>";
+    let errors;
+    try {
+      const error = await response.json();
+      errors = Array.isArray(error.detail) ? error.detail : [String(error.detail)];
+    } catch (err) {
+      statusEl.textContent = "Something went wrong. Please try again.";
+      return;
+    }
+    statusEl.replaceChildren();
+    const strong = document.createElement("strong");
+    strong.textContent = "Errors:";
+    const ul = document.createElement("ul");
+    for (const err of errors) {
+      const li = document.createElement("li");
+      li.textContent = err;
+      ul.appendChild(li);
+    }
+    statusEl.appendChild(strong);
+    statusEl.appendChild(ul);
     return;
   }
 
