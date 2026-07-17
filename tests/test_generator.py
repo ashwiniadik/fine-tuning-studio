@@ -68,3 +68,32 @@ def test_generate_project_raises_on_unknown_model():
         assert False, "expected ValidationFailed"
     except ValidationFailed as e:
         assert any("Unknown model" in err for err in e.errors)
+
+
+import io
+import zipfile
+
+from backend.generator import build_readme, build_zip
+
+
+def test_build_zip_contains_all_files():
+    files = {"a.txt": b"hello", "b/c.txt": b"world"}
+    zip_bytes = build_zip(files)
+    zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    assert set(zf.namelist()) == {"a.txt", "b/c.txt"}
+    assert zf.read("a.txt") == b"hello"
+    assert zf.read("b/c.txt") == b"world"
+
+
+def test_build_readme_lists_stages_in_order():
+    readme = build_readme("legal", "Qwen2.5 0.5B", ["stage2", "stage3"])
+    assert "1. `notebooks/instruction_finetuning.ipynb`" in readme
+    assert "2. `notebooks/dpo_alignment.ipynb`" in readme
+    assert "non_instruction_finetuning" not in readme
+
+
+def test_build_readme_all_three_stages():
+    readme = build_readme("legal", "Qwen2.5 0.5B", ["stage1", "stage2", "stage3"])
+    assert "1. `notebooks/non_instruction_finetuning.ipynb`" in readme
+    assert "2. `notebooks/instruction_finetuning.ipynb`" in readme
+    assert "3. `notebooks/dpo_alignment.ipynb`" in readme
