@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fine-Tuning Studio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <h1>Fine-Tuning Studio</h1>
+    <p>Upload your data, pick a domain and a base model, and get back ready-to-run Colab notebooks.</p>
+
+    <form id="generate-form">
+      <label>
+        Domain name
+        <input type="text" id="domain" name="domain" placeholder="e.g. legal, healthcare, customer support" required />
+      </label>
+
+      <label>
+        Base model
+        <select id="model" name="model" required></select>
+      </label>
+
+      <label>
+        Instruction dataset (.jsonl, required)
+        <input type="file" id="instruction_data" name="instruction_data" accept=".jsonl" required />
+      </label>
+
+      <label>
+        Raw domain text (.txt, optional -- enables Stage 1 non-instruction fine-tuning)
+        <input type="file" id="raw_text" name="raw_text" accept=".txt" />
+      </label>
+
+      <label>
+        Preference dataset (.jsonl, optional -- enables Stage 3 DPO alignment)
+        <input type="file" id="preference_data" name="preference_data" accept=".jsonl" />
+      </label>
+
+      <button type="submit">Generate</button>
+    </form>
+
+    <div id="status"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
