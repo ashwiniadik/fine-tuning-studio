@@ -44,6 +44,59 @@ def test_generate_with_only_instruction_data_returns_zip():
     assert "notebooks/non_instruction_finetuning.ipynb" not in names
 
 
+def test_generate_with_browser_style_empty_optional_files_returns_zip():
+    # A real browser's `new FormData(form)` always includes an entry for every
+    # <input type="file">, even ones the user never touched -- as an empty
+    # File object with an *empty but present* filename (`filename=""` in the
+    # multipart Content-Disposition header), not an absent field. UploadFile
+    # has no __bool__, so `if raw_text:` is always truthy for such a field;
+    # only checking `.filename` distinguishes "no file chosen" from
+    # "provided". Without that check this exact request 400s in a real
+    # browser even though the user only meant to fill in the required
+    # instruction dataset -- confirmed against a live server via Playwright.
+    #
+    # httpx's `files={"raw_text": ("", b"", ...)}` convenience form does NOT
+    # reproduce this: httpx silently omits the `filename` attribute entirely
+    # when it's an empty string, which is a different wire format than what
+    # browsers send and does not trigger the bug. The multipart body must be
+    # built by hand to include `filename=""` explicitly, matching real
+    # browser output.
+    instruction_data = _instruction_data()
+    boundary = "browserstyleboundary"
+    body = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="domain"\r\n\r\n'
+        "legal\r\n"
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="model"\r\n\r\n'
+        "qwen2.5-0.5b\r\n"
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="instruction_data"; filename="instruction_dataset.jsonl"\r\n'
+        "Content-Type: application/json\r\n\r\n"
+        f"{instruction_data}\r\n"
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="raw_text"; filename=""\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+        "\r\n"
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="preference_data"; filename=""\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+        "\r\n"
+        f"--{boundary}--\r\n"
+    ).encode("utf-8")
+
+    response = client.post(
+        "/api/generate",
+        content=body,
+        headers={"content-type": f"multipart/form-data; boundary={boundary}"},
+    )
+    assert response.status_code == 200
+    zf = zipfile.ZipFile(io.BytesIO(response.content))
+    names = zf.namelist()
+    assert "notebooks/non_instruction_finetuning.ipynb" not in names
+    assert "notebooks/dpo_alignment.ipynb" not in names
+
+
 def test_generate_with_invalid_data_returns_400():
     response = client.post(
         "/api/generate",

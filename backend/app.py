@@ -41,10 +41,10 @@ async def generate(
         instruction_data.filename or "instruction_data", await instruction_data.read()
     )
     raw_text_content = raw_text_error = None
-    if raw_text:
+    if raw_text is not None and raw_text.filename:
         raw_text_content, raw_text_error = _decode_upload(raw_text.filename or "raw_text", await raw_text.read())
     preference_content = preference_error = None
-    if preference_data:
+    if preference_data is not None and preference_data.filename:
         preference_content, preference_error = _decode_upload(
             preference_data.filename or "preference_data", await preference_data.read()
         )
