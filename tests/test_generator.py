@@ -70,6 +70,42 @@ def test_generate_project_raises_on_unknown_model():
         assert any("Unknown model" in err for err in e.errors)
 
 
+def test_generate_project_raises_clean_error_on_domain_with_triple_quote():
+    # A domain containing `"""` would otherwise produce a generated notebook
+    # cell that fails to compile (SyntaxError: unterminated triple-quoted
+    # string literal) when opened in Colab. It must be caught here as a clean
+    # validation error instead.
+    try:
+        generate_project(
+            domain='legal"""', model_key="qwen2.5-0.5b", instruction_data=_instruction_data()
+        )
+        assert False, "expected ValidationFailed"
+    except ValidationFailed as e:
+        assert any("domain" in err.lower() for err in e.errors)
+
+
+def test_generate_project_raises_clean_error_on_domain_with_braces():
+    # A domain containing `{` / `}` compiles fine but raises IndexError at
+    # ALPACA_PROMPT.format() runtime in Colab. It must be caught here as a
+    # clean validation error instead.
+    try:
+        generate_project(
+            domain="legal {} braces", model_key="qwen2.5-0.5b", instruction_data=_instruction_data()
+        )
+        assert False, "expected ValidationFailed"
+    except ValidationFailed as e:
+        assert any("domain" in err.lower() for err in e.errors)
+
+
+def test_generate_project_with_multiword_hyphenated_domain_succeeds():
+    # Reasonable real-world domain names (multi-word, hyphenated) must not be
+    # rejected by the new validation.
+    files = generate_project(
+        domain="e-commerce", model_key="qwen2.5-0.5b", instruction_data=_instruction_data()
+    )
+    assert "notebooks/instruction_finetuning.ipynb" in files
+
+
 import io
 import zipfile
 

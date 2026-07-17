@@ -8,7 +8,12 @@ from backend.models_config import MODELS
 from backend.notebook_templates.stage1 import build_stage1_notebook
 from backend.notebook_templates.stage2 import build_stage2_notebook
 from backend.notebook_templates.stage3 import build_stage3_notebook
-from backend.validators import validate_instruction_jsonl, validate_preference_jsonl, validate_raw_text
+from backend.validators import (
+    validate_domain,
+    validate_instruction_jsonl,
+    validate_preference_jsonl,
+    validate_raw_text,
+)
 
 
 def select_stages(has_raw_text: bool, has_preference: bool) -> list[str]:
@@ -71,7 +76,8 @@ def generate_project(
     raw_text: str | None = None,
     preference_data: str | None = None,
 ) -> dict[str, bytes]:
-    errors = [f"instruction_dataset.jsonl: {e}" for e in validate_instruction_jsonl(instruction_data)]
+    errors = [f"domain: {e}" for e in validate_domain(domain)]
+    errors += [f"instruction_dataset.jsonl: {e}" for e in validate_instruction_jsonl(instruction_data)]
     if raw_text is not None:
         errors += [f"non_instruction_data.txt: {e}" for e in validate_raw_text(raw_text)]
     if preference_data is not None:

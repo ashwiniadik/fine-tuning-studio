@@ -54,9 +54,11 @@ def test_generate_with_invalid_data_returns_400():
     assert len(response.json()["detail"]) > 0
 
 
-def test_generate_with_crlf_in_domain_does_not_crash():
-    # A domain containing CRLF must not reach the Content-Disposition header
-    # unescaped (would raise RuntimeError / crash a real ASGI server).
+def test_generate_with_crlf_in_domain_returns_clean_400():
+    # A domain containing CRLF is now rejected by domain validation before it
+    # ever reaches the Content-Disposition header or a generated notebook --
+    # a clean 400, not a crash and not a 200 with injected bytes smuggled
+    # through.
     response = client.post(
         "/api/generate",
         data={"domain": "legal\r\nX-Injected: evil", "model": "qwen2.5-0.5b"},
@@ -68,15 +70,16 @@ def test_generate_with_crlf_in_domain_does_not_crash():
             )
         },
     )
-    assert response.status_code == 200
-    content_disposition = response.headers["content-disposition"]
-    assert "\r" not in content_disposition
-    assert "\n" not in content_disposition
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert any("domain" in message.lower() for message in detail)
 
 
-def test_generate_with_quote_in_domain_does_not_crash():
-    # A domain containing a double quote must not break out of the quoted
-    # filename value in the Content-Disposition header.
+def test_generate_with_quote_in_domain_returns_clean_400():
+    # A domain containing a double quote is now rejected by domain validation
+    # -- both because it would break out of the quoted Content-Disposition
+    # filename value, and because it would break the triple-quoted Python
+    # string literal the domain gets embedded into in generated notebooks.
     response = client.post(
         "/api/generate",
         data={"domain": 'legal"; evil="x', "model": "qwen2.5-0.5b"},
@@ -88,10 +91,70 @@ def test_generate_with_quote_in_domain_does_not_crash():
             )
         },
     )
-    assert response.status_code == 200
-    content_disposition = response.headers["content-disposition"]
-    # Only the two quotes that legitimately wrap the filename value should remain.
-    assert content_disposition.count('"') == 2
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert any("domain" in message.lower() for message in detail)
+
+
+def test_generate_with_braces_in_domain_returns_clean_400():
+    # A domain containing `{` / `}` compiles fine as embedded Python source
+    # but breaks the generated notebook's ALPACA_PROMPT.format() call at
+    # runtime in Colab (IndexError: Replacement index out of range). This
+    # must be caught at validation time instead of shipping a notebook that
+    # crashes when the user actually runs it.
+    response = client.post(
+        "/api/generate",
+        data={"domain": "legal {} braces", "model": "qwen2.5-0.5b"},
+        files={
+            "instruction_data": (
+                "instruction_dataset.jsonl",
+                _instruction_data(),
+                "application/json",
+            )
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert any("domain" in message.lower() for message in detail)
+
+
+def test_generate_with_triple_quote_in_domain_returns_clean_400():
+    # A domain containing `"""` would otherwise produce a generated notebook
+    # code cell that fails to even compile() (SyntaxError: unterminated
+    # triple-quoted string literal) when opened in Colab.
+    response = client.post(
+        "/api/generate",
+        data={"domain": 'legal"""', "model": "qwen2.5-0.5b"},
+        files={
+            "instruction_data": (
+                "instruction_dataset.jsonl",
+                _instruction_data(),
+                "application/json",
+            )
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert any("domain" in message.lower() for message in detail)
+
+
+def test_generate_with_multiword_hyphenated_domain_returns_zip():
+    # Real, reasonable domain names (multi-word, hyphenated) must still work
+    # -- the validator's job is to block syntax-breaking characters, not to
+    # restrict domains to single words.
+    for domain in ("customer support", "e-commerce", "K-12 education"):
+        response = client.post(
+            "/api/generate",
+            data={"domain": domain, "model": "qwen2.5-0.5b"},
+            files={
+                "instruction_data": (
+                    "instruction_dataset.jsonl",
+                    _instruction_data(),
+                    "application/json",
+                )
+            },
+        )
+        assert response.status_code == 200, f"domain {domain!r} unexpectedly rejected: {response.text}"
 
 
 def test_generate_with_non_utf8_instruction_data_returns_400():

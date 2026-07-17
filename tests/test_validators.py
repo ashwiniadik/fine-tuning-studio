@@ -135,3 +135,43 @@ def test_preference_jsonl_does_not_require_chosen_longer_than_rejected():
     )
     errors = validate_preference_jsonl(content)
     assert not any("longer" in e.lower() for e in errors)
+
+
+from backend.validators import validate_domain
+
+
+def test_valid_simple_domain_returns_no_errors():
+    assert validate_domain("legal") == []
+
+
+def test_valid_multiword_hyphenated_domains_return_no_errors():
+    # Real, reasonable domain names must not be rejected -- the threat model
+    # is "prevent syntax-breaking characters," not "only allow single words."
+    for domain in ("customer support", "e-commerce", "K-12 education", "Tax & Accounting"):
+        assert validate_domain(domain) == [], f"domain {domain!r} unexpectedly rejected"
+
+
+def test_domain_empty_is_rejected():
+    errors = validate_domain("   ")
+    assert any("must not be empty" in e for e in errors)
+
+
+def test_domain_with_triple_quote_is_rejected():
+    # `domain` gets embedded into a Python triple-quoted string literal in
+    # generated notebooks; `"""` would produce a notebook cell that fails to
+    # even compile (SyntaxError: unterminated triple-quoted string literal).
+    errors = validate_domain('legal"""')
+    assert len(errors) > 0
+
+
+def test_domain_with_braces_is_rejected():
+    # `{` / `}` compile fine but break the generated notebook's
+    # ALPACA_PROMPT.format() call at runtime (IndexError: Replacement index
+    # out of range for positional args tuple).
+    errors = validate_domain("legal {} braces")
+    assert len(errors) > 0
+
+
+def test_domain_too_long_is_rejected():
+    errors = validate_domain("a" * 101)
+    assert any("100 characters" in e for e in errors)

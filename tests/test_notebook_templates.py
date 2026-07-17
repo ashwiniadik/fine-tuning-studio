@@ -132,3 +132,34 @@ def test_stage2_and_stage3_use_identical_alpaca_prompt():
     escaped_prompt_text = prompt_text.replace("\n", "\\n")
     assert escaped_prompt_text in json.dumps(nb2)
     assert escaped_prompt_text in json.dumps(nb3)
+
+
+def test_alpaca_prompt_text_rejects_syntax_breaking_domain_directly():
+    # Defense in depth: alpaca_prompt_text is a shared helper that any future
+    # caller could invoke directly, bypassing the FastAPI-level validation in
+    # backend/app.py. It must refuse to build a broken prompt template rather
+    # than silently emitting Python source that fails to compile or crashes
+    # at .format() runtime.
+    import pytest
+
+    from backend.notebook_templates._helpers import alpaca_prompt_text
+
+    with pytest.raises(ValueError):
+        alpaca_prompt_text('legal"""')
+    with pytest.raises(ValueError):
+        alpaca_prompt_text("legal {} braces")
+
+
+def test_build_stage2_notebook_rejects_syntax_breaking_domain():
+    # End-to-end: building a Stage 2 notebook with a domain containing `"""`
+    # must raise a clean error rather than emitting a code cell that fails to
+    # compile() in Colab (the originally reported bug).
+    import pytest
+
+    from backend.notebook_templates.stage2 import build_stage2_notebook
+
+    model = MODELS["qwen2.5-0.5b"]
+    with pytest.raises(ValueError):
+        build_stage2_notebook(
+            'legal"""', model["unsloth_model_id"], model["lora"], 2e-4, 3, None
+        )

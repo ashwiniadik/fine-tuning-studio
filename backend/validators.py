@@ -9,9 +9,37 @@ anti-pattern that risks teaching DPO to prefer verbosity over correctness.
 """
 
 import json
+import re
 
 MIN_RAW_TEXT_PARAGRAPHS = 10
 MIN_PARAGRAPH_WORDS = 15
+
+MAX_DOMAIN_LENGTH = 100
+# `domain` gets embedded directly into generated Python source (an f-string
+# inside a triple-quoted string literal in the generated notebook's code
+# cells -- see notebook_templates/_helpers.py:alpaca_prompt_text). Quotes,
+# braces, and backslashes can break that embedding (unterminated string /
+# broken str.format() at runtime), so the allowed charset is deliberately an
+# allowlist rather than a blocklist of "known dangerous" characters.
+DOMAIN_ALLOWED_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 '&,./-]*$")
+
+
+def validate_domain(domain: str) -> list[str]:
+    errors = []
+    stripped = domain.strip()
+    if not stripped:
+        errors.append("Domain must not be empty.")
+        return errors
+    if len(stripped) > MAX_DOMAIN_LENGTH:
+        errors.append(f"Domain must be at most {MAX_DOMAIN_LENGTH} characters.")
+    if not DOMAIN_ALLOWED_PATTERN.match(stripped):
+        errors.append(
+            "Domain may only contain letters, numbers, spaces, and basic "
+            "punctuation (- ' & , . /); it cannot contain quotes, braces, or "
+            "other special characters, since it gets embedded directly into "
+            "generated Python source code."
+        )
+    return errors
 
 
 def validate_raw_text(content: str) -> list[str]:
