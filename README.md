@@ -3,6 +3,8 @@
 A web tool that generates ready-to-run Google Colab notebooks for fine-tuning
 a small language model on your own dataset, for any domain.
 
+![Fine-Tuning Studio screenshot](.github/screenshot.png)
+
 ## What this is (and isn't)
 
 This is a **notebook generator**, not a training service. Upload your dataset,
