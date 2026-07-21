@@ -9,6 +9,7 @@
 [![repo size](https://img.shields.io/github/repo-size/ashwiniadik/fine-tuning-studio)](https://github.com/ashwiniadik/fine-tuning-studio)
 [![stars](https://img.shields.io/github/stars/ashwiniadik/fine-tuning-studio)](https://github.com/ashwiniadik/fine-tuning-studio/stargazers)
 [![release](https://img.shields.io/github/v/release/ashwiniadik/fine-tuning-studio)](https://github.com/ashwiniadik/fine-tuning-studio/releases/latest)
+[![release date](https://img.shields.io/github/release-date/ashwiniadik/fine-tuning-studio)](https://github.com/ashwiniadik/fine-tuning-studio/releases/latest)
 
 A web tool that generates ready-to-run Google Colab notebooks for fine-tuning
 a small language model on your own dataset, for any domain.
