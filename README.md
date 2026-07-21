@@ -3,6 +3,7 @@
 [![tests](https://github.com/ashwiniadik/fine-tuning-studio/actions/workflows/tests.yml/badge.svg)](https://github.com/ashwiniadik/fine-tuning-studio/actions/workflows/tests.yml)
 [![license](https://img.shields.io/github/license/ashwiniadik/fine-tuning-studio)](LICENSE)
 [![open issues](https://img.shields.io/github/issues/ashwiniadik/fine-tuning-studio)](https://github.com/ashwiniadik/fine-tuning-studio/issues)
+[![python](https://img.shields.io/badge/python-3.11-blue)](.github/workflows/tests.yml)
 
 A web tool that generates ready-to-run Google Colab notebooks for fine-tuning
 a small language model on your own dataset, for any domain.
